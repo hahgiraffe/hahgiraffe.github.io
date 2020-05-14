@@ -6,10 +6,19 @@
     <description>Recent content on HAHGIRAFFE&#39;S BLOG</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Wed, 13 May 2020 23:18:18 +0800</lastBuildDate>
+    <lastBuildDate>Wed, 13 May 2020 22:56:22 +0800</lastBuildDate>
     
 	<atom:link href="http://hahgiraffe.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>C&#43;&#43;云风库coroutine解析</title>
+      <link>http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/</link>
+      <pubDate>Thu, 14 May 2020 21:04:39 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/</guid>
+      <description>云风coroutine库是一个C语言实现的轻量级协程库，源码简洁易懂，可以说是了(ru)解(keng)协程原理的最好源码资源。 我在之前的文章中，借助腾讯开源的libco，对C/C++的协程实现有了一个简单介绍，参考博客。其实libco和云风coroutine有很多相似的思想，只不</description>
+    </item>
     
     <item>
       <title>Git</title>
@@ -18,15 +27,6 @@
       
       <guid>http://hahgiraffe.github.io/tools/git/</guid>
       <description></description>
-    </item>
-    
-    <item>
-      <title>Archives</title>
-      <link>http://hahgiraffe.github.io/archives/</link>
-      <pubDate>Wed, 13 May 2020 23:18:18 +0800</pubDate>
-      
-      <guid>http://hahgiraffe.github.io/archives/</guid>
-      <description>2020 2019 </description>
     </item>
     
     <item>
@@ -40,11 +40,11 @@ Student</description>
     </item>
     
     <item>
-      <title>Firstblog</title>
-      <link>http://hahgiraffe.github.io/post/firstblog/</link>
-      <pubDate>Wed, 13 May 2020 22:53:15 +0800</pubDate>
+      <title>Archives</title>
+      <link>http://hahgiraffe.github.io/archives/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>http://hahgiraffe.github.io/post/firstblog/</guid>
+      <guid>http://hahgiraffe.github.io/archives/</guid>
       <description></description>
     </item>
     

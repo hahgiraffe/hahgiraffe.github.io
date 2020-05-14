@@ -6,9 +6,46 @@
     <description>Recent content in Categories on HAHGIRAFFE&#39;S BLOG</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
+    <lastBuildDate>Thu, 14 May 2020 21:04:39 +0800</lastBuildDate>
     
 	<atom:link href="http://hahgiraffe.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>协程</title>
+      <link>http://hahgiraffe.github.io/categories/%E5%8D%8F%E7%A8%8B/</link>
+      <pubDate>Thu, 14 May 2020 21:04:39 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/categories/%E5%8D%8F%E7%A8%8B/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>git</title>
+      <link>http://hahgiraffe.github.io/categories/git/</link>
+      <pubDate>Wed, 13 May 2020 23:19:36 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/categories/git/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>thinking</title>
+      <link>http://hahgiraffe.github.io/categories/thinking/</link>
+      <pubDate>Wed, 13 May 2020 22:56:22 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/categories/thinking/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>C/C&#43;&#43;</title>
+      <link>http://hahgiraffe.github.io/categories/C/C&#43;&#43;/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/categories/C/C&#43;&#43;/</guid>
+      <description></description>
+    </item>
     
   </channel>
 </rss>

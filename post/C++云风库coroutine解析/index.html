@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>C&#43;&#43;云风库coroutine解析 | HAHGIRAFFE&#39;S BLOG</title>
+    <meta property="og:title" content="C&#43;&#43;云风库coroutine解析 - HAHGIRAFFE&#39;S BLOG">
+    <meta property="og:type" content="article">
+        
+    <meta property="article:published_time" content='2020-05-14T21:04:39&#43;08:00'>
+        
+        
+    <meta property="article:modified_time" content='2020-05-14T21:04:39&#43;08:00'>
+        
+    <meta name="Keywords" content="C、C&#43;&#43;、Golang、CLoud Native">
+    <meta name="description" content="C&#43;&#43;云风库coroutine解析">
+        
+    <meta name="author" content="hahgiraffe">
+    <meta property="og:url" content="http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href='/css/normalize.css'>
+    <link rel="stylesheet" href='/css/style.css'>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-4031353640611810",
+        enable_page_level_ads: true
+    });
+    </script>
+    
+
+
+    
+    
+        <link rel="stylesheet" href='/css/douban.css'>
+    
+        <link rel="stylesheet" href='/css/other.css'>
+    
+</head>
+
+
+<body>
+    <header id="header" class="clearfix">
+    <div class="container">
+        <div class="col-group">
+            <div class="site-name ">
+                
+                    <a id="logo" href="http://hahgiraffe.github.io/">
+                        HAHGIRAFFE&#39;S BLOG
+                    </a>
+                
+                <p class="description">专注于C/C&#43;&#43;、Golang、协程、云原生</p>
+            </div>
+            <div>
+                <nav id="nav-menu" class="clearfix">
+                    <a class="current" href="http://hahgiraffe.github.io/">首页</a>
+                    
+                    <a  href="http://hahgiraffe.github.io/tools/" title="工具">工具</a>
+                    
+                    <a  href="http://hahgiraffe.github.io/archives/" title="归档">归档</a>
+                    
+                    <a  href="http://hahgiraffe.github.io/about/" title="关于">关于</a>
+                    
+                </nav>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <div id="body">
+        <div class="container">
+            <div class="col-group">
+
+                <div class="col-8" id="main">
+                    
+<div class="res-cons">
+    <style type="text/css">
+    .post-toc {
+        position: fixed;
+        width: 200px;
+        margin-left: -210px;
+        padding: 5px 10px;
+        font-family: Athelas, STHeiti, Microsoft Yahei, serif;
+        font-size: 12px;
+        border: 1px solid rgba(0, 0, 0, .07);
+        border-radius: 5px;
+        background-color: rgba(255, 255, 255, 0.98);
+        background-clip: padding-box;
+        -webkit-box-shadow: 1px 1px 2px rgba(0, 0, 0, .125);
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, .125);
+        word-wrap: break-word;
+        white-space: nowrap;
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        z-index: 999;
+        cursor: pointer;
+        max-height: 70%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .post-toc .post-toc-title {
+        width: 100%;
+        margin: 0 auto;
+        font-size: 20px;
+        font-weight: 400;
+        text-transform: uppercase;
+        text-align: center;
+    }
+
+    .post-toc .post-toc-content {
+        font-size: 15px;
+    }
+
+    .post-toc .post-toc-content>nav>ul {
+        margin: 10px 0;
+    }
+
+    .post-toc .post-toc-content ul {
+        padding-left: 20px;
+        list-style: square;
+        margin: 0.5em;
+        line-height: 1.8em;
+    }
+
+    .post-toc .post-toc-content ul ul {
+        padding-left: 15px;
+        display: none;
+    }
+
+    @media print,
+    screen and (max-width:1057px) {
+        .post-toc {
+            display: none;
+        }
+    }
+</style>
+<div class="post-toc" style="position: absolute; top: 188px;">
+    <h2 class="post-toc-title">文章目录</h2>
+    <div class="post-toc-content">
+        <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#设计思路分析">设计思路分析</a></li>
+        <li><a href="#源码分析">源码分析</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    </div>
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        var postToc = $(".post-toc");
+        if (postToc.length) {
+            var leftPos = $("#main").offset().left;
+            if(leftPos<220){
+                postToc.css({"width":leftPos-10,"margin-left":(0-leftPos)})
+            }
+
+            var t = postToc.offset().top - 20,
+                a = {
+                    start: {
+                        position: "absolute",
+                        top: t
+                    },
+                    process: {
+                        position: "fixed",
+                        top: 20
+                    },
+                };
+            $(window).scroll(function () {
+                var e = $(window).scrollTop();
+                e < t ? postToc.css(a.start) : postToc.css(a.process)
+            })
+        }
+    })
+</script>
+    <article class="post">
+        <header>
+            <h1 class="post-title">C&#43;&#43;云风库coroutine解析</h1>
+        </header>
+        <date class="post-meta meta-date">
+            2020年5月14日
+        </date>
+        
+        <div class="post-meta">
+            <span>|</span>
+            
+            <span class="meta-category"><a href='http://hahgiraffe.github.io/categories/C/C&#43;&#43;'>C/C&#43;&#43;</a></span>
+            
+            <span class="meta-category"><a href='http://hahgiraffe.github.io/categories/%E5%8D%8F%E7%A8%8B'>协程</a></span>
+            
+        </div>
+        
+        
+        <div class="post-meta">
+            <span id="busuanzi_container_page_pv">|<span id="busuanzi_value_page_pv"></span><span>
+                    阅读</span></span>
+        </div>
+        
+        
+        <div class="post-content">
+            <p>云风coroutine库是一个C语言实现的轻量级协程库，源码简洁易懂，可以说是了(ru)解(keng)协程原理的最好源码资源。
+我在之前的文章中，借助腾讯开源的libco，对C/C++的协程实现有了一个简单介绍，参考<a href="https://blog.csdn.net/puliao4167/article/details/101173732">博客</a>。其实libco和云风coroutine有很多相似的思想，只不过实现的方式不同而已，云风库只是提供了一种实现思路，并没有对hook进行处理，而libco则是工业级的协程库实现。通过两者源码阅读分析，可以比较出不同的实现方式的差异，多多思考源码库的作者为什么要这么设计，自己能不能对其进行改进，这样对自己的提升很有帮助。</p>
+<h3 id="设计思路分析">设计思路分析</h3>
+<p>云风库主要利用ucontext簇函数进行协程上下文切换，ucontext簇函数的最大有点就是简单易用，但是切换的性能不如libco设计的汇编逻辑（主要原因是ucontext内部实现上下文切换了很多不需要的寄存器，而libco汇编实现的切换则更加简洁直接），主要包括一下四个函数：</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#998;font-style:italic">//获取当前的上下文保存到ucp
+</span><span style="color:#998;font-style:italic"></span>getcontext(ucontext_t <span style="color:#000;font-weight:bold">*</span>ucp)
+<span style="color:#998;font-style:italic">//直接到ucp所指向的上下文中去执行
+</span><span style="color:#998;font-style:italic"></span>setcontext(<span style="color:#000;font-weight:bold">const</span> ucontext_t <span style="color:#000;font-weight:bold">*</span>ucp)
+<span style="color:#998;font-style:italic">//创建一个新的上下文
+</span><span style="color:#998;font-style:italic"></span>makecontext(ucontext_t <span style="color:#000;font-weight:bold">*</span>ucp, <span style="color:#458;font-weight:bold">void</span> (<span style="color:#000;font-weight:bold">*</span>func)(), <span style="color:#458;font-weight:bold">int</span> argc, ...) 
+<span style="color:#998;font-style:italic">//将当前上下文保存到oucp,然后跳转到ucp上下文执行
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">int</span> swapcontext(ucontext_t <span style="color:#000;font-weight:bold">*</span>oucp, <span style="color:#000;font-weight:bold">const</span> ucontext_t <span style="color:#000;font-weight:bold">*</span>ucp)
+
+<span style="color:#998;font-style:italic">//ucontext结构体
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">typedef</span> <span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">ucontext</span>{
+	<span style="color:#998;font-style:italic">//当这个上下文终止后，运行uc_link指向的上下文
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#998;font-style:italic">//如果为NULL则终止当前线程
+</span><span style="color:#998;font-style:italic"></span>    <span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">ucontext</span><span style="color:#000;font-weight:bold">*</span> uc_link;
+    <span style="color:#998;font-style:italic">//  为该上下文的阻塞信号集合
+</span><span style="color:#998;font-style:italic"></span>    sigset_t uc_sigmask;
+    <span style="color:#998;font-style:italic">//该上下文使用的栈
+</span><span style="color:#998;font-style:italic"></span>    stack_t uc_stack;
+    <span style="color:#998;font-style:italic">//保持上下文的特定寄存器
+</span><span style="color:#998;font-style:italic"></span>    mcontext_t uc_mcontext;
+    ...
+}ucontext_t
+</code></pre></td></tr></table>
+</div>
+</div><p>API的设计方面，云风库的API设计的非常简洁，主要如下的设计：</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#998;font-style:italic">//协程对象的四种状态
+</span><span style="color:#998;font-style:italic"></span><span style="color:#999;font-weight:bold;font-style:italic">#define COROUTINE_DEAD 0
+</span><span style="color:#999;font-weight:bold;font-style:italic">#define COROUTINE_READY 1
+</span><span style="color:#999;font-weight:bold;font-style:italic">#define COROUTINE_RUNNING 2
+</span><span style="color:#999;font-weight:bold;font-style:italic">#define COROUTINE_SUSPEND 3
+</span><span style="color:#999;font-weight:bold;font-style:italic"></span>
+<span style="color:#998;font-style:italic">//新建协程调度器对象
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span> <span style="color:#900;font-weight:bold">coroutine_open</span>(<span style="color:#458;font-weight:bold">void</span>);
+<span style="color:#998;font-style:italic">//关闭协程调度器
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">void</span> <span style="color:#900;font-weight:bold">coroutine_close</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>);
+
+<span style="color:#998;font-style:italic">//创建协程对象
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">int</span> <span style="color:#900;font-weight:bold">coroutine_new</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>, coroutine_func, <span style="color:#458;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">*</span>ud);
+<span style="color:#998;font-style:italic">//执行协程对象（启动或继续）
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">void</span> <span style="color:#900;font-weight:bold">coroutine_resume</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>, <span style="color:#458;font-weight:bold">int</span> id);
+<span style="color:#998;font-style:italic">//返回协程对象的状态
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">int</span> <span style="color:#900;font-weight:bold">coroutine_status</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>, <span style="color:#458;font-weight:bold">int</span> id);
+<span style="color:#998;font-style:italic">//返回正在执行的协程ID
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">int</span> <span style="color:#900;font-weight:bold">coroutine_running</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>);
+<span style="color:#998;font-style:italic">//yeild当前执行的协程，返回到主协程
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">void</span> <span style="color:#900;font-weight:bold">coroutine_yield</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>);
+</code></pre></td></tr></table>
+</div>
+</div><p>在协程栈的设计中，云风库也是选择共享栈的实现，即每个协程自己保持栈中的数据，每当resume运行的时候，将自己的数据copy到运行栈上，每当yield的时候，将运行栈的数据（首先要找到栈底和栈顶）保存在自己协程结构体中。这种方法优势在于只需要一开始初始化一大块栈内存（云风库默认是1M），运行时数据放在其上即可，不会考虑到爆栈的问题，相比于每个协程一个自己的栈，栈内存的利用率要高很多。缺点在于，每次协程切换都会有用户态中的copy过程。接下来可以看其如何实现。</p>
+<h3 id="源码分析">源码分析</h3>
+<p>接下来看其主要的逻辑实现。云风库中主要有两个结构体。一个是调度器，一个是协程。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#998;font-style:italic">//协程调度器
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> {
+	<span style="color:#458;font-weight:bold">char</span> stack[STACK_SIZE];	<span style="color:#998;font-style:italic">//默认大小1MB，是一个共享栈，所有协程运行时都在其上
+</span><span style="color:#998;font-style:italic"></span>	ucontext_t main;		<span style="color:#998;font-style:italic">//主协程上下文
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">int</span> nco;				<span style="color:#998;font-style:italic">//协程调度器中存活协程个数
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">int</span> cap;				<span style="color:#998;font-style:italic">//协程调度器管理最大容量。最大支持多少协程。当nco &gt;= cap时候要扩容
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">int</span> running;			<span style="color:#998;font-style:italic">//正在运行的协程ID
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">coroutine</span> <span style="color:#000;font-weight:bold">**</span>co;	<span style="color:#998;font-style:italic">//一维数组，数组元素是协程指针
+</span><span style="color:#998;font-style:italic"></span>};
+
+<span style="color:#998;font-style:italic">//协程
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">coroutine</span> {
+	coroutine_func func;	<span style="color:#998;font-style:italic">//协程执行函数
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">void</span> <span style="color:#000;font-weight:bold">*</span>ud;				<span style="color:#998;font-style:italic">//协程参数
+</span><span style="color:#998;font-style:italic"></span>	ucontext_t ctx;			<span style="color:#998;font-style:italic">//协程上下文
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span> sch;	<span style="color:#998;font-style:italic">//协程对应的调度器
+</span><span style="color:#998;font-style:italic"></span>	ptrdiff_t cap;			<span style="color:#998;font-style:italic">//协程自己保存栈的最大容量（stack的容量）
+</span><span style="color:#998;font-style:italic"></span>	ptrdiff_t size;			<span style="color:#998;font-style:italic">//协程自己保存的栈当前大小（stack的大小）
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">int</span> status;				<span style="color:#998;font-style:italic">//协程状态
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">char</span> <span style="color:#000;font-weight:bold">*</span>stack;			<span style="color:#998;font-style:italic">//当前协程自己保存的栈数据，因为是共享栈的设计，
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#998;font-style:italic">//即每个协程都在同一个栈空间中切换，所以每个协程在切换出来后要保存自己的栈内容
+</span><span style="color:#998;font-style:italic"></span>};
+</code></pre></td></tr></table>
+</div>
+</div><p>接下来看一下coroutine_resume的源码，这个函数是开启指定协程，可以看到有两种情况，一种是协程第一次执行，状态从COROUTINE_READY -&gt; COROUTINE_RUNNING，另一种是协程之前运行过但是yield了，再次执行，状态从COROUTINE_SUSPEND -&gt; COROUTINE_RUNNING。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">42
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">43
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">44
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">45
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">46
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">47
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">48
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">49
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">50
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#998;font-style:italic">//mainfunc是对协程函数的封装，里面运行了用户提供的协程函数，并在结束后删除对应的协程
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">static</span> <span style="color:#458;font-weight:bold">void</span>
+<span style="color:#900;font-weight:bold">mainfunc</span>(<span style="color:#458;font-weight:bold">uint32_t</span> low32, <span style="color:#458;font-weight:bold">uint32_t</span> hi32) {
+	uintptr_t ptr <span style="color:#000;font-weight:bold">=</span> (uintptr_t)low32 <span style="color:#000;font-weight:bold">|</span> ((uintptr_t)hi32 <span style="color:#000;font-weight:bold">&lt;&lt;</span> <span style="color:#099">32</span>);
+	<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>S <span style="color:#000;font-weight:bold">=</span> (<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span>)ptr;
+	<span style="color:#458;font-weight:bold">int</span> id <span style="color:#000;font-weight:bold">=</span> S<span style="color:#000;font-weight:bold">-&gt;</span>running;
+	<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">coroutine</span> <span style="color:#000;font-weight:bold">*</span>C <span style="color:#000;font-weight:bold">=</span> S<span style="color:#000;font-weight:bold">-&gt;</span>co[id];
+	C<span style="color:#000;font-weight:bold">-&gt;</span>func(S,C<span style="color:#000;font-weight:bold">-&gt;</span>ud);	<span style="color:#998;font-style:italic">//运行对应函数
+</span><span style="color:#998;font-style:italic"></span>	_co_delete(C);
+	S<span style="color:#000;font-weight:bold">-&gt;</span>co[id] <span style="color:#000;font-weight:bold">=</span> <span style="color:#0086b3">NULL</span>;
+	<span style="color:#000;font-weight:bold">--</span>S<span style="color:#000;font-weight:bold">-&gt;</span>nco;
+	S<span style="color:#000;font-weight:bold">-&gt;</span>running <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">-</span><span style="color:#099">1</span>;
+}
+
+<span style="color:#998;font-style:italic">//指定的协程开始（继续）运行
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">void</span> 
+<span style="color:#900;font-weight:bold">coroutine_resume</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span> S, <span style="color:#458;font-weight:bold">int</span> id) {
+	<span style="color:#998;font-style:italic">//首先确保没有正在运行的协程，并且id满足条件
+</span><span style="color:#998;font-style:italic"></span>	assert(S<span style="color:#000;font-weight:bold">-&gt;</span>running <span style="color:#000;font-weight:bold">==</span> <span style="color:#000;font-weight:bold">-</span><span style="color:#099">1</span>);
+	assert(id <span style="color:#000;font-weight:bold">&gt;=</span><span style="color:#099">0</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> id <span style="color:#000;font-weight:bold">&lt;</span> S<span style="color:#000;font-weight:bold">-&gt;</span>cap);
+	<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">coroutine</span> <span style="color:#000;font-weight:bold">*</span>C <span style="color:#000;font-weight:bold">=</span> S<span style="color:#000;font-weight:bold">-&gt;</span>co[id];
+	<span style="color:#000;font-weight:bold">if</span> (C <span style="color:#000;font-weight:bold">==</span> <span style="color:#0086b3">NULL</span>)
+		<span style="color:#000;font-weight:bold">return</span>;
+	<span style="color:#458;font-weight:bold">int</span> status <span style="color:#000;font-weight:bold">=</span> C<span style="color:#000;font-weight:bold">-&gt;</span>status;
+	<span style="color:#000;font-weight:bold">switch</span>(status) {
+	<span style="color:#000;font-weight:bold">case</span> <span style="color:#900;font-weight:bold">COROUTINE_READY</span>:
+		<span style="color:#998;font-style:italic">//此时协程是刚刚新建的，还没运行过，切换上下文，getcontext初始化即将要运行协程的上下文，
+</span><span style="color:#998;font-style:italic"></span>		getcontext(<span style="color:#000;font-weight:bold">&amp;</span>C<span style="color:#000;font-weight:bold">-&gt;</span>ctx);
+		C<span style="color:#000;font-weight:bold">-&gt;</span>ctx.uc_stack.ss_sp <span style="color:#000;font-weight:bold">=</span> S<span style="color:#000;font-weight:bold">-&gt;</span>stack;	<span style="color:#998;font-style:italic">//设置共享栈（即设置当前协程中的栈为运行栈，运行栈就是共享栈，一开始就分配好的1M空间）
+</span><span style="color:#998;font-style:italic"></span>		C<span style="color:#000;font-weight:bold">-&gt;</span>ctx.uc_stack.ss_size <span style="color:#000;font-weight:bold">=</span> STACK_SIZE;
+		C<span style="color:#000;font-weight:bold">-&gt;</span>ctx.uc_link <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">&amp;</span>S<span style="color:#000;font-weight:bold">-&gt;</span>main;			<span style="color:#998;font-style:italic">//uc_link是当前上下文终止后，执行运行主协程的上下文
+</span><span style="color:#998;font-style:italic"></span>		S<span style="color:#000;font-weight:bold">-&gt;</span>running <span style="color:#000;font-weight:bold">=</span> id;
+		C<span style="color:#000;font-weight:bold">-&gt;</span>status <span style="color:#000;font-weight:bold">=</span> COROUTINE_RUNNING;
+		<span style="color:#998;font-style:italic">//注意这里将S作为参数，传到mainfunc里面，但是先划分成两个uint32_t，然后再在mainfunc中合并
+</span><span style="color:#998;font-style:italic"></span>		uintptr_t ptr <span style="color:#000;font-weight:bold">=</span> (uintptr_t)S;
+		makecontext(<span style="color:#000;font-weight:bold">&amp;</span>C<span style="color:#000;font-weight:bold">-&gt;</span>ctx, (<span style="color:#458;font-weight:bold">void</span> (<span style="color:#000;font-weight:bold">*</span>)(<span style="color:#458;font-weight:bold">void</span>)) mainfunc, <span style="color:#099">2</span>, (<span style="color:#458;font-weight:bold">uint32_t</span>)ptr, (<span style="color:#458;font-weight:bold">uint32_t</span>)(ptr<span style="color:#000;font-weight:bold">&gt;&gt;</span><span style="color:#099">32</span>));
+		swapcontext(<span style="color:#000;font-weight:bold">&amp;</span>S<span style="color:#000;font-weight:bold">-&gt;</span>main, <span style="color:#000;font-weight:bold">&amp;</span>C<span style="color:#000;font-weight:bold">-&gt;</span>ctx);
+		<span style="color:#000;font-weight:bold">break</span>;
+	<span style="color:#000;font-weight:bold">case</span> <span style="color:#900;font-weight:bold">COROUTINE_SUSPEND</span>:
+		<span style="color:#998;font-style:italic">//此时协程已经被yield过，memcpy将协程自己的栈中内存copy到运行栈
+</span><span style="color:#998;font-style:italic"></span>		<span style="color:#998;font-style:italic">//共享栈的缺点就是在yield和resume的时候要自己进行copy，将协程自己保存的栈内容与运行栈之间进行copy
+</span><span style="color:#998;font-style:italic"></span>		memcpy(S<span style="color:#000;font-weight:bold">-&gt;</span>stack <span style="color:#000;font-weight:bold">+</span> STACK_SIZE <span style="color:#000;font-weight:bold">-</span> C<span style="color:#000;font-weight:bold">-&gt;</span>size, C<span style="color:#000;font-weight:bold">-&gt;</span>stack, C<span style="color:#000;font-weight:bold">-&gt;</span>size);
+		S<span style="color:#000;font-weight:bold">-&gt;</span>running <span style="color:#000;font-weight:bold">=</span> id;
+		C<span style="color:#000;font-weight:bold">-&gt;</span>status <span style="color:#000;font-weight:bold">=</span> COROUTINE_RUNNING;
+		swapcontext(<span style="color:#000;font-weight:bold">&amp;</span>S<span style="color:#000;font-weight:bold">-&gt;</span>main, <span style="color:#000;font-weight:bold">&amp;</span>C<span style="color:#000;font-weight:bold">-&gt;</span>ctx);
+		<span style="color:#000;font-weight:bold">break</span>;
+	<span style="color:#000;font-weight:bold">default</span><span style="color:#000;font-weight:bold">:</span>
+		assert(<span style="color:#099">0</span>);
+	}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>接下来看一下coroutine_yield的实现。yield就是将协程调度器中当前运行的协程中断，然后用户态下切换另一个协程运行。至于中断的原因有很多，比如在等IO的时候，或者等待系统调用，或者等待网络数据，云风库中没有对其实现，具体可以去看看libco中hook了哪些函数。
+这里的有一个问题，就是在yield的过程中，要将运行栈的数据copy出来，如何找到运行栈中的数据呢？我们知道，在进程地址空间中，栈是从高地址向低地址延伸的，也就是说栈底在高地址，栈顶在低地址，要想copy栈中的数据，只需要找到栈顶和栈底地址，将其中的数据memcpy出来即可。栈底很好找，即为S-&gt;stack + STACK_SIZE，栈顶则可以利用一个dummy对象，将S-&gt;stack与dummy对象的地址相减，即为栈目前的长度。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-cpp" data-lang="cpp"><span style="color:#998;font-style:italic">//保存当前协程的协程栈，因为coroutine是基于共享栈的，所以协程的栈内容需要单独保存起来。
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">static</span> <span style="color:#458;font-weight:bold">void</span>
+<span style="color:#900;font-weight:bold">_save_stack</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">coroutine</span> <span style="color:#000;font-weight:bold">*</span>C, <span style="color:#458;font-weight:bold">char</span> <span style="color:#000;font-weight:bold">*</span>top) {
+	<span style="color:#998;font-style:italic">//利用dump找到栈顶位置（最低地址）
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#458;font-weight:bold">char</span> dummy <span style="color:#000;font-weight:bold">=</span> <span style="color:#099">0</span>;
+	assert(top <span style="color:#000;font-weight:bold">-</span> <span style="color:#000;font-weight:bold">&amp;</span>dummy <span style="color:#000;font-weight:bold">&lt;=</span> STACK_SIZE);
+	<span style="color:#000;font-weight:bold">if</span> (C<span style="color:#000;font-weight:bold">-&gt;</span>cap <span style="color:#000;font-weight:bold">&lt;</span> top <span style="color:#000;font-weight:bold">-</span> <span style="color:#000;font-weight:bold">&amp;</span>dummy) {
+		free(C<span style="color:#000;font-weight:bold">-&gt;</span>stack);
+		C<span style="color:#000;font-weight:bold">-&gt;</span>cap <span style="color:#000;font-weight:bold">=</span> top<span style="color:#000;font-weight:bold">-&amp;</span>dummy;
+		C<span style="color:#000;font-weight:bold">-&gt;</span>stack <span style="color:#000;font-weight:bold">=</span> malloc(C<span style="color:#000;font-weight:bold">-&gt;</span>cap);
+	}
+	C<span style="color:#000;font-weight:bold">-&gt;</span>size <span style="color:#000;font-weight:bold">=</span> top <span style="color:#000;font-weight:bold">-</span> <span style="color:#000;font-weight:bold">&amp;</span>dummy;
+	memcpy(C<span style="color:#000;font-weight:bold">-&gt;</span>stack, <span style="color:#000;font-weight:bold">&amp;</span>dummy, C<span style="color:#000;font-weight:bold">-&gt;</span>size);
+}
+
+<span style="color:#998;font-style:italic">//切换出当前正在运行的协程，切换到主协程运行，因为主协程中有while()，并且两个子协程相继切换
+</span><span style="color:#998;font-style:italic"></span><span style="color:#458;font-weight:bold">void</span>
+<span style="color:#900;font-weight:bold">coroutine_yield</span>(<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">schedule</span> <span style="color:#000;font-weight:bold">*</span> S) {
+	<span style="color:#458;font-weight:bold">int</span> id <span style="color:#000;font-weight:bold">=</span> S<span style="color:#000;font-weight:bold">-&gt;</span>running;
+	assert(id <span style="color:#000;font-weight:bold">&gt;=</span> <span style="color:#099">0</span>);
+	<span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">coroutine</span> <span style="color:#000;font-weight:bold">*</span> C <span style="color:#000;font-weight:bold">=</span> S<span style="color:#000;font-weight:bold">-&gt;</span>co[id];
+	assert((<span style="color:#458;font-weight:bold">char</span> <span style="color:#000;font-weight:bold">*</span>)<span style="color:#000;font-weight:bold">&amp;</span>C <span style="color:#000;font-weight:bold">&gt;</span> S<span style="color:#000;font-weight:bold">-&gt;</span>stack);
+	_save_stack(C,S<span style="color:#000;font-weight:bold">-&gt;</span>stack <span style="color:#000;font-weight:bold">+</span> STACK_SIZE);<span style="color:#998;font-style:italic">//栈是从高地址向低地址发展的，S-&gt;stack + STACK_SIZE是栈底（最高地址）
+</span><span style="color:#998;font-style:italic"></span>	C<span style="color:#000;font-weight:bold">-&gt;</span>status <span style="color:#000;font-weight:bold">=</span> COROUTINE_SUSPEND;
+	S<span style="color:#000;font-weight:bold">-&gt;</span>running <span style="color:#000;font-weight:bold">=</span> <span style="color:#000;font-weight:bold">-</span><span style="color:#099">1</span>;
+	swapcontext(<span style="color:#000;font-weight:bold">&amp;</span>C<span style="color:#000;font-weight:bold">-&gt;</span>ctx , <span style="color:#000;font-weight:bold">&amp;</span>S<span style="color:#000;font-weight:bold">-&gt;</span>main);
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>参考：</p>
+<ol>
+<li><a href="https://blog.codingnow.com/2012/07/c_coroutine.html">云风的BLOG</a></li>
+<li><a href="https://blog.csdn.net/puliao4167/article/details/101173732">libco协程概述</a></li>
+</ol>
+
+        </div>
+
+        
+<div class="post-archive">
+    <ul class="post-copyright">
+        <li><strong>原文作者：</strong><a rel="author" href="http://hahgiraffe.github.io/">hahgiraffe</a></li>
+        <li style="word-break:break-all"><strong>原文链接：</strong><a href="http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/">http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/</a></li>
+        <li><strong>版权声明：</strong>本作品采用<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/">知识共享署名-非商业性使用-禁止演绎 4.0 国际许可协议</a>进行许可，非商业转载请注明出处（作者，原文链接），商业转载请联系作者获得授权。</li>
+    </ul>
+</div>
+<br/>
+
+
+
+        
+
+<div class="post-archive">
+    <h2>See Also</h2>
+    <ul class="listing">
+        
+        <li><a href="/tools/git/">Git</a></li>
+        
+        <li><a href="/about/">About me</a></li>
+        
+        <li><a href="/archives/">Archives</a></li>
+        
+    </ul>
+</div>
+
+
+        <div class="post-meta meta-tags">
+            
+            没有标签
+            
+        </div>
+    </article>
+    
+    <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "yourdiscussshortname" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+    
+    
+    <div class="post bg-white">
+      <script src="https://utteranc.es/client.js"
+            repo= "your github repo"
+            issue-term="pathname"
+            theme="github-light"
+            crossorigin="anonymous"
+            async>
+      </script>
+    </div>
+    
+</div>
+
+                </div>
+
+                <div id="secondary">
+    <section class="widget">
+        <form id="search" action='http://hahgiraffe.github.io/search/' method="get" accept-charset="utf-8" target="_blank" _lpchecked="1">
+      
+      <input type="text" name="q" maxlength="20" placeholder="Search">
+      <input type="hidden" name="sitesearch" value="http://hahgiraffe.github.io/">
+      <button type="submit" class="submit icon-search"></button>
+</form>
+    </section>
+    
+    <section class="widget">
+        <h3 class="widget-title">最近文章</h3>
+<ul class="widget-list">
+    
+    <li>
+        <a href="http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/" title="C&#43;&#43;云风库coroutine解析">C&#43;&#43;云风库coroutine解析</a>
+    </li>
+    
+</ul>
+    </section>
+
+    
+
+    <section class="widget">
+        <h3 class="widget-title">分类</h3>
+<ul class="widget-list">
+    
+    <li><a href="http://hahgiraffe.github.io/categories/C/C&#43;&#43;/">C/C&#43;&#43; (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/git/">git (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/thinking/">thinking (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/%E5%8D%8F%E7%A8%8B/">协程 (1)</a></li>
+    
+</ul>
+    </section>
+
+    <section class="widget">
+        <h3 class="widget-title">标签</h3>
+<div class="tagcloud">
+    
+    <a href="http://hahgiraffe.github.io/tags/myself/">myself</a>
+    
+    <a href="http://hahgiraffe.github.io/tags/tools/">tools</a>
+    
+</div>
+    </section>
+
+    
+<section class="widget">
+    <h3 class="widget-title">友情链接</h3>
+    <ul class="widget-list">
+        
+        <li>
+            <a target="_blank" href="https://www.github.com/hahgiraffe" title="my github">my github</a>
+        </li>
+        
+        <li>
+            <a target="_blank" href="https://me.csdn.net/puliao4167" title="my old blog">my old blog</a>
+        </li>
+        
+    </ul>
+</section>
+
+
+    <section class="widget">
+        <h3 class="widget-title">其它</h3>
+        <ul class="widget-list">
+            <li><a href="http://hahgiraffe.github.io/index.xml">文章 RSS</a></li>
+        </ul>
+    </section>
+</div>
+            </div>
+        </div>
+    </div>
+    <footer id="footer">
+    <div class="container">
+        &copy; 2020 <a href="http://hahgiraffe.github.io/">HAHGIRAFFE&#39;S BLOG By hahgiraffe</a>.
+        Powered by <a rel="nofollow noreferer noopener" href="https://gohugo.io" target="_blank">Hugo</a>.
+        <a href="https://www.flysnow.org/" target="_blank">Theme</a> based on <a href="https://github.com/flysnow-org/maupassant-hugo" target="_blank">maupassant</a>.
+        
+    </div>
+</footer>
+
+
+    
+    <script type="text/javascript">
+        window.MathJax = {
+            tex2jax: {
+                inlineMath: [['$', '$']],
+                processEscapes: true
+                }
+            };
+    </script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
+
+
+<a id="rocket" href="#top"></a>
+<script type="text/javascript" src='/js/totop.js?v=0.0.0' async=""></script>
+
+
+
+    <script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+
+
+
+
+    <script src='/js/douban.js'></script>
+
+</body>
+
+</html>

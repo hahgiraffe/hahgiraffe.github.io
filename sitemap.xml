@@ -3,7 +3,37 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/</loc>
+    <lastmod>2020-05-14T21:04:39+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/categories/</loc>
+    <lastmod>2020-05-14T21:04:39+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/post/</loc>
+    <lastmod>2020-05-14T21:04:39+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/categories/%E5%8D%8F%E7%A8%8B/</loc>
+    <lastmod>2020-05-14T21:04:39+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>http://hahgiraffe.github.io/tools/git/</loc>
+    <lastmod>2020-05-13T23:19:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/categories/git/</loc>
+    <lastmod>2020-05-13T23:19:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/tags/</loc>
     <lastmod>2020-05-13T23:19:36+08:00</lastmod>
   </url>
   
@@ -13,13 +43,8 @@
   </url>
   
   <url>
-    <loc>http://hahgiraffe.github.io/archives/</loc>
-    <lastmod>2020-05-13T23:18:18+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>http://hahgiraffe.github.io/</loc>
-    <lastmod>2020-05-13T23:18:18+08:00</lastmod>
+    <loc>http://hahgiraffe.github.io/tags/tools/</loc>
+    <lastmod>2020-05-13T23:19:36+08:00</lastmod>
   </url>
   
   <url>
@@ -28,21 +53,26 @@
   </url>
   
   <url>
-    <loc>http://hahgiraffe.github.io/post/firstblog/</loc>
-    <lastmod>2020-05-13T22:53:15+08:00</lastmod>
+    <loc>http://hahgiraffe.github.io/</loc>
+    <lastmod>2020-05-13T22:56:22+08:00</lastmod>
   </url>
   
   <url>
-    <loc>http://hahgiraffe.github.io/post/</loc>
-    <lastmod>2020-05-13T22:53:15+08:00</lastmod>
+    <loc>http://hahgiraffe.github.io/tags/myself/</loc>
+    <lastmod>2020-05-13T22:56:22+08:00</lastmod>
   </url>
   
   <url>
-    <loc>http://hahgiraffe.github.io/categories/</loc>
+    <loc>http://hahgiraffe.github.io/categories/thinking/</loc>
+    <lastmod>2020-05-13T22:56:22+08:00</lastmod>
   </url>
   
   <url>
-    <loc>http://hahgiraffe.github.io/tags/</loc>
+    <loc>http://hahgiraffe.github.io/archives/</loc>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/categories/C/C&#43;&#43;/</loc>
   </url>
   
 </urlset>
