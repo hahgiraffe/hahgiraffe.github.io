@@ -147,12 +147,8 @@
     <div class="post-toc-content">
         <nav id="TableOfContents">
   <ul>
-    <li>
-      <ul>
-        <li><a href="#设计思路分析">设计思路分析</a></li>
-        <li><a href="#源码分析">源码分析</a></li>
-      </ul>
-    </li>
+    <li><a href="#设计思路分析">设计思路分析</a></li>
+    <li><a href="#源码分析">源码分析</a></li>
   </ul>
 </nav>
     </div>
@@ -208,10 +204,16 @@
         </div>
         
         
+        <div class="clear" style="display: none">
+            <div class="toc-article">
+                <div class="toc-title">文章目录</div>
+            </div>
+        </div>
+        
         <div class="post-content">
             <p>云风coroutine库是一个C语言实现的轻量级协程库，源码简洁易懂，可以说是了(ru)解(keng)协程原理的最好源码资源。
 我在之前的文章中，借助腾讯开源的libco，对C/C++的协程实现有了一个简单介绍，参考<a href="https://blog.csdn.net/puliao4167/article/details/101173732">博客</a>。其实libco和云风coroutine有很多相似的思想，只不过实现的方式不同而已，云风库只是提供了一种实现思路，并没有对hook进行处理，而libco则是工业级的协程库实现。通过两者源码阅读分析，可以比较出不同的实现方式的差异，多多思考源码库的作者为什么要这么设计，自己能不能对其进行改进，这样对自己的提升很有帮助。</p>
-<h3 id="设计思路分析">设计思路分析</h3>
+<h2 id="设计思路分析">设计思路分析</h2>
 <p>云风库主要利用ucontext簇函数进行协程上下文切换，ucontext簇函数的最大有点就是简单易用，但是切换的性能不如libco设计的汇编逻辑（主要原因是ucontext内部实现上下文切换了很多不需要的寄存器，而libco汇编实现的切换则更加简洁直接），主要包括一下四个函数：</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
@@ -250,8 +252,8 @@
 
 <span style="color:#998;font-style:italic">//ucontext结构体
 </span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">typedef</span> <span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">ucontext</span>{
-	<span style="color:#998;font-style:italic">//当这个上下文终止后，运行uc_link指向的上下文
-</span><span style="color:#998;font-style:italic"></span>	<span style="color:#998;font-style:italic">//如果为NULL则终止当前线程
+ <span style="color:#998;font-style:italic">//当这个上下文终止后，运行uc_link指向的上下文
+</span><span style="color:#998;font-style:italic"></span> <span style="color:#998;font-style:italic">//如果为NULL则终止当前线程
 </span><span style="color:#998;font-style:italic"></span>    <span style="color:#000;font-weight:bold">struct</span> <span style="color:#458;font-weight:bold">ucontext</span><span style="color:#000;font-weight:bold">*</span> uc_link;
     <span style="color:#998;font-style:italic">//  为该上下文的阻塞信号集合
 </span><span style="color:#998;font-style:italic"></span>    sigset_t uc_sigmask;
@@ -313,7 +315,7 @@
 </code></pre></td></tr></table>
 </div>
 </div><p>在协程栈的设计中，云风库也是选择共享栈的实现，即每个协程自己保持栈中的数据，每当resume运行的时候，将自己的数据copy到运行栈上，每当yield的时候，将运行栈的数据（首先要找到栈底和栈顶）保存在自己协程结构体中。这种方法优势在于只需要一开始初始化一大块栈内存（云风库默认是1M），运行时数据放在其上即可，不会考虑到爆栈的问题，相比于每个协程一个自己的栈，栈内存的利用率要高很多。缺点在于，每次协程切换都会有用户态中的copy过程。接下来可以看其如何实现。</p>
-<h3 id="源码分析">源码分析</h3>
+<h2 id="源码分析">源码分析</h2>
 <p>接下来看其主要的逻辑实现。云风库中主要有两个结构体。一个是调度器，一个是协程。</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
@@ -577,38 +579,9 @@
         </div>
     </article>
     
-    <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
     
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "yourdiscussshortname" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 
     
-    
-    <div class="post bg-white">
-      <script src="https://utteranc.es/client.js"
-            repo= "your github repo"
-            issue-term="pathname"
-            theme="github-light"
-            crossorigin="anonymous"
-            async>
-      </script>
-    </div>
     
 </div>
 
