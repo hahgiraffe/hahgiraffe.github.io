@@ -12,6 +12,15 @@
     
     
     <item>
+      <title>协程概述与Libco</title>
+      <link>http://hahgiraffe.github.io/post/%E5%8D%8F%E7%A8%8B%E6%A6%82%E8%BF%B0%E4%B8%8ELibco/</link>
+      <pubDate>Sun, 17 May 2020 15:58:28 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/post/%E5%8D%8F%E7%A8%8B%E6%A6%82%E8%BF%B0%E4%B8%8ELibco/</guid>
+      <description>本篇文章记录了，我在学习协程以及Libco封装过程的心得体会，以及对协程的理解。 一开始知道“协程”这个概念是在go语言中，在网络编程领域，可以说Goroutine的实现新打开了一扇窗。很多资料对其的描述都是简单地称其为“轻量级的用户态线程”。无论是Go，C++，python，ja</description>
+    </item>
+    
+    <item>
       <title>C&#43;&#43;云风库coroutine解析</title>
       <link>http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/</link>
       <pubDate>Thu, 14 May 2020 21:04:39 +0800</pubDate>
