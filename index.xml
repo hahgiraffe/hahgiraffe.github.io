@@ -12,6 +12,15 @@
     
     
     <item>
+      <title>Raft概述</title>
+      <link>http://hahgiraffe.github.io/post/raft%E6%A6%82%E8%BF%B0/</link>
+      <pubDate>Tue, 19 May 2020 09:19:49 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/post/raft%E6%A6%82%E8%BF%B0/</guid>
+      <description>Raft概述 Raft是工程上用的比较多的一致性、去中心化、高可用的共识算法（Paxos学术方面用的比较多）。共识算法就是在分布式的环境下，能让多个节点达成一致意见（其中要考虑到节点失效、新增节点、网络延迟等问题）Raft相比Paxos，优势在于容易理解，同时性能也不弱于Paxos</description>
+    </item>
+    
+    <item>
       <title>协程概述与Libco</title>
       <link>http://hahgiraffe.github.io/post/%E5%8D%8F%E7%A8%8B%E6%A6%82%E8%BF%B0%E4%B8%8ELibco/</link>
       <pubDate>Sun, 17 May 2020 15:58:28 +0800</pubDate>

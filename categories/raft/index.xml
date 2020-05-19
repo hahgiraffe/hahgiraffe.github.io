@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>raft on HAHGIRAFFE&#39;S BLOG</title>
+    <link>http://hahgiraffe.github.io/categories/raft/</link>
+    <description>Recent content in raft on HAHGIRAFFE&#39;S BLOG</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-CN</language>
+    <lastBuildDate>Tue, 19 May 2020 09:19:49 +0800</lastBuildDate>
+    
+	<atom:link href="http://hahgiraffe.github.io/categories/raft/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Raft概述</title>
+      <link>http://hahgiraffe.github.io/post/raft%E6%A6%82%E8%BF%B0/</link>
+      <pubDate>Tue, 19 May 2020 09:19:49 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/post/raft%E6%A6%82%E8%BF%B0/</guid>
+      <description>Raft概述 Raft是工程上用的比较多的一致性、去中心化、高可用的共识算法（Paxos学术方面用的比较多）。共识算法就是在分布式的环境下，能让多个节点达成一致意见（其中要考虑到节点失效、新增节点、网络延迟等问题）Raft相比Paxos，优势在于容易理解，同时性能也不弱于Paxos</description>
+    </item>
+    
+  </channel>
+</rss>
