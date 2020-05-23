@@ -6,15 +6,24 @@
     <description>Recent content in Categories on HAHGIRAFFE&#39;S BLOG</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Tue, 19 May 2020 09:19:49 +0800</lastBuildDate>
+    <lastBuildDate>Tue, 19 May 2020 11:40:16 +0800</lastBuildDate>
     
 	<atom:link href="http://hahgiraffe.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
+      <title>etcd</title>
+      <link>http://hahgiraffe.github.io/categories/etcd/</link>
+      <pubDate>Tue, 19 May 2020 11:40:16 +0800</pubDate>
+      
+      <guid>http://hahgiraffe.github.io/categories/etcd/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>raft</title>
       <link>http://hahgiraffe.github.io/categories/raft/</link>
-      <pubDate>Tue, 19 May 2020 09:19:49 +0800</pubDate>
+      <pubDate>Tue, 19 May 2020 11:40:16 +0800</pubDate>
       
       <guid>http://hahgiraffe.github.io/categories/raft/</guid>
       <description></description>

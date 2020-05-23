@@ -4,17 +4,27 @@
   
   <url>
     <loc>http://hahgiraffe.github.io/categories/</loc>
-    <lastmod>2020-05-19T09:19:49+08:00</lastmod>
+    <lastmod>2020-05-19T11:40:16+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/categories/etcd/</loc>
+    <lastmod>2020-05-19T11:40:16+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>http://hahgiraffe.github.io/post/etcd%E7%9A%84raftexample%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</loc>
+    <lastmod>2020-05-19T11:40:16+08:00</lastmod>
   </url>
   
   <url>
     <loc>http://hahgiraffe.github.io/post/</loc>
-    <lastmod>2020-05-19T09:19:49+08:00</lastmod>
+    <lastmod>2020-05-19T11:40:16+08:00</lastmod>
   </url>
   
   <url>
     <loc>http://hahgiraffe.github.io/categories/raft/</loc>
-    <lastmod>2020-05-19T09:19:49+08:00</lastmod>
+    <lastmod>2020-05-19T11:40:16+08:00</lastmod>
   </url>
   
   <url>

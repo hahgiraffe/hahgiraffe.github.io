@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Etcd的raftexample源码分析 | HAHGIRAFFE&#39;S BLOG</title>
+    <meta property="og:title" content="Etcd的raftexample源码分析 - HAHGIRAFFE&#39;S BLOG">
+    <meta property="og:type" content="article">
+        
+    <meta property="article:published_time" content='2020-05-19T11:40:16&#43;08:00'>
+        
+        
+    <meta property="article:modified_time" content='2020-05-19T11:40:16&#43;08:00'>
+        
+    <meta name="Keywords" content="C、C&#43;&#43;、Golang、CLoud Native">
+    <meta name="description" content="Etcd的raftexample源码分析">
+        
+    <meta name="author" content="hahgiraffe">
+    <meta property="og:url" content="http://hahgiraffe.github.io/post/etcd%E7%9A%84raftexample%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href='/css/normalize.css'>
+    <link rel="stylesheet" href='/css/style.css'>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+    (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-4031353640611810",
+        enable_page_level_ads: true
+    });
+    </script>
+    
+
+
+    
+    
+        <link rel="stylesheet" href='/css/douban.css'>
+    
+        <link rel="stylesheet" href='/css/other.css'>
+    
+</head>
+
+
+<body>
+    <header id="header" class="clearfix">
+    <div class="container">
+        <div class="col-group">
+            <div class="site-name ">
+                
+                    <a id="logo" href="http://hahgiraffe.github.io/">
+                        HAHGIRAFFE&#39;S BLOG
+                    </a>
+                
+                <p class="description">专注于C/C&#43;&#43;、Golang、协程、云原生</p>
+            </div>
+            <div>
+                <nav id="nav-menu" class="clearfix">
+                    <a class="current" href="http://hahgiraffe.github.io/">首页</a>
+                    
+                    <a  href="http://hahgiraffe.github.io/tools/" title="工具">工具</a>
+                    
+                    <a  href="http://hahgiraffe.github.io/archives/" title="归档">归档</a>
+                    
+                    <a  href="http://hahgiraffe.github.io/about/" title="关于">关于</a>
+                    
+                </nav>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <div id="body">
+        <div class="container">
+            <div class="col-group">
+
+                <div class="col-8" id="main">
+                    
+<div class="res-cons">
+    <style type="text/css">
+    .post-toc {
+        position: fixed;
+        width: 200px;
+        margin-left: -210px;
+        padding: 5px 10px;
+        font-family: Athelas, STHeiti, Microsoft Yahei, serif;
+        font-size: 12px;
+        border: 1px solid rgba(0, 0, 0, .07);
+        border-radius: 5px;
+        background-color: rgba(255, 255, 255, 0.98);
+        background-clip: padding-box;
+        -webkit-box-shadow: 1px 1px 2px rgba(0, 0, 0, .125);
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, .125);
+        word-wrap: break-word;
+        white-space: nowrap;
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        z-index: 999;
+        cursor: pointer;
+        max-height: 70%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .post-toc .post-toc-title {
+        width: 100%;
+        margin: 0 auto;
+        font-size: 20px;
+        font-weight: 400;
+        text-transform: uppercase;
+        text-align: center;
+    }
+
+    .post-toc .post-toc-content {
+        font-size: 15px;
+    }
+
+    .post-toc .post-toc-content>nav>ul {
+        margin: 10px 0;
+    }
+
+    .post-toc .post-toc-content ul {
+        padding-left: 20px;
+        list-style: square;
+        margin: 0.5em;
+        line-height: 1.8em;
+    }
+
+    .post-toc .post-toc-content ul ul {
+        padding-left: 15px;
+        display: none;
+    }
+
+    @media print,
+    screen and (max-width:1057px) {
+        .post-toc {
+            display: none;
+        }
+    }
+</style>
+<div class="post-toc" style="position: absolute; top: 188px;">
+    <h2 class="post-toc-title">文章目录</h2>
+    <div class="post-toc-content">
+        <nav id="TableOfContents">
+  <ul>
+    <li><a href="#raftexample-源码分析">raftexample 源码分析</a></li>
+  </ul>
+</nav>
+    </div>
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        var postToc = $(".post-toc");
+        if (postToc.length) {
+            var leftPos = $("#main").offset().left;
+            if(leftPos<220){
+                postToc.css({"width":leftPos-10,"margin-left":(0-leftPos)})
+            }
+
+            var t = postToc.offset().top - 20,
+                a = {
+                    start: {
+                        position: "absolute",
+                        top: t
+                    },
+                    process: {
+                        position: "fixed",
+                        top: 20
+                    },
+                };
+            $(window).scroll(function () {
+                var e = $(window).scrollTop();
+                e < t ? postToc.css(a.start) : postToc.css(a.process)
+            })
+        }
+    })
+</script>
+    <article class="post">
+        <header>
+            <h1 class="post-title">Etcd的raftexample源码分析</h1>
+        </header>
+        <date class="post-meta meta-date">
+            2020年5月19日
+        </date>
+        
+        <div class="post-meta">
+            <span>|</span>
+            
+            <span class="meta-category"><a href='http://hahgiraffe.github.io/categories/etcd'>etcd</a></span>
+            
+            <span class="meta-category"><a href='http://hahgiraffe.github.io/categories/raft'>raft</a></span>
+            
+        </div>
+        
+        
+        <div class="post-meta">
+            <span id="busuanzi_container_page_pv">|<span id="busuanzi_value_page_pv"></span><span>
+                    阅读</span></span>
+        </div>
+        
+        
+        <div class="post-content">
+            <p>etcd/raft是一个完成度很高的raft库，内部提供了一个raftexample的kv存储器，可以通过url对kv进行增加数据和查询数据，同时能对集群节点配置信息修改。</p>
+<h2 id="raftexample-源码分析">raftexample 源码分析</h2>
+<p>在了解raftexample之前，要先对底层的etcd/raft有一个初步的了解，etcd/raft是一个分布式一致性的库，其内部是一个状态机（也就是提供不同的输入，返回给你不同的输出），其主要提供了leader选举,log Entries等功能。但是像应用层的一些逻辑，WAL，Snapshot等都没有实现，而是暴露了接口，然用户根据自己的实际逻辑进行处理，这也给初学者带来了一定的困扰。</p>
+<p>etcd/raft通过Node和上层应用进行交互，在raftexample/raft.go中对其进行封装和使用。</p>
+<p>先看一下整体布局,主要包括五个文件。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    httpapi.<span style="color:#000;font-weight:bold">go</span>  <span style="color:#998;font-style:italic">//处理http相关请求
+</span><span style="color:#998;font-style:italic"></span>    kvstore.<span style="color:#000;font-weight:bold">go</span>  <span style="color:#998;font-style:italic">//存储相关的接口
+</span><span style="color:#998;font-style:italic"></span>    main.<span style="color:#000;font-weight:bold">go</span>     <span style="color:#998;font-style:italic">//程序入口
+</span><span style="color:#998;font-style:italic"></span>    raft.<span style="color:#000;font-weight:bold">go</span>     <span style="color:#998;font-style:italic">//对底层etcd/raft库进行封装和抽象
+</span><span style="color:#998;font-style:italic"></span>    listener.<span style="color:#000;font-weight:bold">go</span> <span style="color:#998;font-style:italic">//处理服务器状态监听
+</span></code></pre></td></tr></table>
+</div>
+</div><p>先来看一下main.go里面的主要逻辑，主要就是分成三个步骤：新建管道，初始化raftnode和kvstore，开启http服务。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#998;font-style:italic">// 一开始进行参数parse，主要的参数id（节点id），join（是否加入集群），kvport（kv存储服务端口），cluster（一个集群的ip地址）
+</span><span style="color:#998;font-style:italic"></span>    <span style="color:#998;font-style:italic">// proposeC是处理用户层传递的数据插入、查询等命令
+</span><span style="color:#998;font-style:italic"></span>    proposeC <span style="color:#000;font-weight:bold">:=</span> <span style="color:#0086b3">make</span>(<span style="color:#000;font-weight:bold">chan</span> <span style="color:#458;font-weight:bold">string</span>)
+    <span style="color:#000;font-weight:bold">defer</span> <span style="color:#0086b3">close</span>(proposeC)
+    <span style="color:#998;font-style:italic">// confChangeC是处理用户层传递配置相关命令
+</span><span style="color:#998;font-style:italic"></span>    confChangeC <span style="color:#000;font-weight:bold">:=</span> <span style="color:#0086b3">make</span>(<span style="color:#000;font-weight:bold">chan</span> raftpb.ConfChange)
+    <span style="color:#000;font-weight:bold">defer</span> <span style="color:#0086b3">close</span>(confChangeC)
+
+    <span style="color:#998;font-style:italic">// raft provides a commit stream for the proposals from the http api
+</span><span style="color:#998;font-style:italic"></span>    <span style="color:#000;font-weight:bold">var</span> kvs <span style="color:#000;font-weight:bold">*</span>kvstore
+    getSnapshot <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">func</span>() ([]<span style="color:#458;font-weight:bold">byte</span>, <span style="color:#458;font-weight:bold">error</span>) { <span style="color:#000;font-weight:bold">return</span> kvs.<span style="color:#900;font-weight:bold">getSnapshot</span>() }
+
+    <span style="color:#998;font-style:italic">// newRaftNode创建一个新的节点
+</span><span style="color:#998;font-style:italic"></span>    commitC, errorC, snapshotterReady <span style="color:#000;font-weight:bold">:=</span> <span style="color:#900;font-weight:bold">newRaftNode</span>(<span style="color:#000;font-weight:bold">*</span>id, strings.<span style="color:#900;font-weight:bold">Split</span>(<span style="color:#000;font-weight:bold">*</span>cluster, <span style="color:#d14">&#34;,&#34;</span>), <span style="color:#000;font-weight:bold">*</span>join, getSnapshot, proposeC, confChangeC)
+
+    <span style="color:#998;font-style:italic">// kvstore是一个新的存储实例
+</span><span style="color:#998;font-style:italic"></span>    kvs = <span style="color:#900;font-weight:bold">newKVStore</span>(<span style="color:#000;font-weight:bold">&lt;-</span>snapshotterReady, proposeC, commitC, errorC)
+
+    <span style="color:#998;font-style:italic">// 通过http方式接收命令，然后传递给底层的raft库
+</span><span style="color:#998;font-style:italic"></span>    <span style="color:#900;font-weight:bold">serveHttpKVAPI</span>(kvs, <span style="color:#000;font-weight:bold">*</span>kvport, confChangeC, errorC)
+
+</code></pre></td></tr></table>
+</div>
+</div><p>我们跟随着使用存储服务的逻辑，从最简单的http处理开始看。可以看到其处理了四种HTTP方法，PUT表示插入数据，GET表示读取数据，POST表示增加节点，DELETE删除节点。可以看到PUT和GET分别是调用kvstore的Propose方法和Lookup方法，而POST和DELETE分别是新建了一个raftpb.ConfChange对象，然后传递到confChangeC管道。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">42
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">43
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">44
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">45
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">46
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">47
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">48
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">49
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">50
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">51
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">52
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">53
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">54
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">55
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">56
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">57
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#998;font-style:italic">// Handler for a http based key-value store backed by raft
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">type</span> httpKVAPI <span style="color:#000;font-weight:bold">struct</span> {
+    <span style="color:#998;font-style:italic">//store存储结构
+</span><span style="color:#998;font-style:italic"></span>    store       <span style="color:#000;font-weight:bold">*</span>kvstore
+    confChangeC <span style="color:#000;font-weight:bold">chan</span><span style="color:#000;font-weight:bold">&lt;-</span> raftpb.ConfChange
+}
+
+<span style="color:#998;font-style:italic">//PUT插入数据，GET读取数据，POST增加节点，DELETE删除节点
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">func</span> (h <span style="color:#000;font-weight:bold">*</span>httpKVAPI) <span style="color:#900;font-weight:bold">ServeHTTP</span>(w http.ResponseWriter, r <span style="color:#000;font-weight:bold">*</span>http.Request) {
+    key <span style="color:#000;font-weight:bold">:=</span> r.RequestURI
+    <span style="color:#000;font-weight:bold">switch</span> {
+    <span style="color:#000;font-weight:bold">case</span> r.Method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;PUT&#34;</span>:
+        v, err <span style="color:#000;font-weight:bold">:=</span> ioutil.<span style="color:#900;font-weight:bold">ReadAll</span>(r.Body)
+        <span style="color:#000;font-weight:bold">...</span>
+        h.store.<span style="color:#900;font-weight:bold">Propose</span>(key, <span style="color:#0086b3">string</span>(v))
+
+        w.<span style="color:#900;font-weight:bold">WriteHeader</span>(http.StatusNoContent)
+    <span style="color:#000;font-weight:bold">case</span> r.Method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;GET&#34;</span>:
+        <span style="color:#000;font-weight:bold">if</span> v, ok <span style="color:#000;font-weight:bold">:=</span> h.store.<span style="color:#900;font-weight:bold">Lookup</span>(key); ok {
+            w.<span style="color:#900;font-weight:bold">Write</span>([]<span style="color:#0086b3">byte</span>(v))
+        } <span style="color:#000;font-weight:bold">else</span> {
+            http.<span style="color:#900;font-weight:bold">Error</span>(w, <span style="color:#d14">&#34;Failed to GET&#34;</span>, http.StatusNotFound)
+        }
+    <span style="color:#000;font-weight:bold">case</span> r.Method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;POST&#34;</span>:
+        url, err <span style="color:#000;font-weight:bold">:=</span> ioutil.<span style="color:#900;font-weight:bold">ReadAll</span>(r.Body)
+        <span style="color:#000;font-weight:bold">...</span>
+        nodeId, err <span style="color:#000;font-weight:bold">:=</span> strconv.<span style="color:#900;font-weight:bold">ParseUint</span>(key[<span style="color:#099">1</span>:], <span style="color:#099">0</span>, <span style="color:#099">64</span>)
+        <span style="color:#000;font-weight:bold">...</span>
+
+        cc <span style="color:#000;font-weight:bold">:=</span> raftpb.ConfChange{
+            Type:    raftpb.ConfChangeAddNode,
+            NodeID:  nodeId,
+            Context: url,
+        }
+        <span style="color:#998;font-style:italic">//配置变化传到confChangC中
+</span><span style="color:#998;font-style:italic"></span>        h.confChangeC <span style="color:#000;font-weight:bold">&lt;-</span> cc
+
+        w.<span style="color:#900;font-weight:bold">WriteHeader</span>(http.StatusNoContent)
+    <span style="color:#000;font-weight:bold">case</span> r.Method <span style="color:#000;font-weight:bold">==</span> <span style="color:#d14">&#34;DELETE&#34;</span>:
+        nodeId, err <span style="color:#000;font-weight:bold">:=</span> strconv.<span style="color:#900;font-weight:bold">ParseUint</span>(key[<span style="color:#099">1</span>:], <span style="color:#099">0</span>, <span style="color:#099">64</span>)
+        <span style="color:#000;font-weight:bold">...</span>
+
+        cc <span style="color:#000;font-weight:bold">:=</span> raftpb.ConfChange{
+            Type:   raftpb.ConfChangeRemoveNode,
+            NodeID: nodeId,
+        }
+        h.confChangeC <span style="color:#000;font-weight:bold">&lt;-</span> cc
+
+        w.<span style="color:#900;font-weight:bold">WriteHeader</span>(http.StatusNoContent)
+    <span style="color:#000;font-weight:bold">default</span>:
+        w.<span style="color:#900;font-weight:bold">Header</span>().<span style="color:#900;font-weight:bold">Set</span>(<span style="color:#d14">&#34;Allow&#34;</span>, <span style="color:#d14">&#34;PUT&#34;</span>)
+        w.<span style="color:#900;font-weight:bold">Header</span>().<span style="color:#900;font-weight:bold">Add</span>(<span style="color:#d14">&#34;Allow&#34;</span>, <span style="color:#d14">&#34;GET&#34;</span>)
+        w.<span style="color:#900;font-weight:bold">Header</span>().<span style="color:#900;font-weight:bold">Add</span>(<span style="color:#d14">&#34;Allow&#34;</span>, <span style="color:#d14">&#34;POST&#34;</span>)
+        w.<span style="color:#900;font-weight:bold">Header</span>().<span style="color:#900;font-weight:bold">Add</span>(<span style="color:#d14">&#34;Allow&#34;</span>, <span style="color:#d14">&#34;DELETE&#34;</span>)
+        http.<span style="color:#900;font-weight:bold">Error</span>(w, <span style="color:#d14">&#34;Method not allowed&#34;</span>, http.StatusMethodNotAllowed)
+    }
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>接下来我们分开来看，首先看一下kvstore。kvstore是一个应用层的存储，底层是etcd/raft库。Lookup方法直接从kvStore中取键值对，Propose方法则是先编码，然后传入proposeC管道。除此之外，在newKVStore新建存储中，开了一个协程执行readCommits，readCommits的功能主要是监听着commitC管道，一旦有其他协程往管道中传输已提交（raft库已commited）的信息，则立刻解码并插入数据到kvStore</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">42
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">43
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">44
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">45
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">46
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">47
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">48
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">49
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">50
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">51
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">52
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">53
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">54
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">55
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">56
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">57
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">58
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">59
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">60
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">61
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">62
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">63
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">64
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">65
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">66
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">67
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">68
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">69
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">70
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">71
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">72
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#998;font-style:italic">// a key-value store backed by raft
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">type</span> kvstore <span style="color:#000;font-weight:bold">struct</span> {
+	proposeC    <span style="color:#000;font-weight:bold">chan</span><span style="color:#000;font-weight:bold">&lt;-</span> <span style="color:#458;font-weight:bold">string</span>       <span style="color:#998;font-style:italic">// channel for proposing updates
+</span><span style="color:#998;font-style:italic"></span>	mu          sync.RWMutex
+	kvStore     <span style="color:#000;font-weight:bold">map</span>[<span style="color:#458;font-weight:bold">string</span>]<span style="color:#458;font-weight:bold">string</span>   <span style="color:#998;font-style:italic">// current committed key-value pairs
+</span><span style="color:#998;font-style:italic"></span>	snapshotter <span style="color:#000;font-weight:bold">*</span>snap.Snapshotter
+}
+
+<span style="color:#000;font-weight:bold">type</span> kv <span style="color:#000;font-weight:bold">struct</span> {
+	Key <span style="color:#458;font-weight:bold">string</span>
+	Val <span style="color:#458;font-weight:bold">string</span>
+}
+
+<span style="color:#000;font-weight:bold">func</span> <span style="color:#900;font-weight:bold">newKVStore</span>(snapshotter <span style="color:#000;font-weight:bold">*</span>snap.Snapshotter, proposeC <span style="color:#000;font-weight:bold">chan</span><span style="color:#000;font-weight:bold">&lt;-</span> <span style="color:#458;font-weight:bold">string</span>, commitC <span style="color:#000;font-weight:bold">&lt;-</span><span style="color:#000;font-weight:bold">chan</span> <span style="color:#000;font-weight:bold">*</span><span style="color:#458;font-weight:bold">string</span>, errorC <span style="color:#000;font-weight:bold">&lt;-</span><span style="color:#000;font-weight:bold">chan</span> <span style="color:#458;font-weight:bold">error</span>) <span style="color:#000;font-weight:bold">*</span>kvstore {
+	s <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">&amp;</span>kvstore{proposeC: proposeC, kvStore: <span style="color:#0086b3">make</span>(<span style="color:#000;font-weight:bold">map</span>[<span style="color:#458;font-weight:bold">string</span>]<span style="color:#458;font-weight:bold">string</span>), snapshotter: snapshotter}
+	<span style="color:#998;font-style:italic">// replay log into key-value map
+</span><span style="color:#998;font-style:italic"></span>	s.<span style="color:#900;font-weight:bold">readCommits</span>(commitC, errorC)
+	<span style="color:#998;font-style:italic">// read commits from raft into kvStore map until error
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#000;font-weight:bold">go</span> s.<span style="color:#900;font-weight:bold">readCommits</span>(commitC, errorC)
+	<span style="color:#000;font-weight:bold">return</span> s
+}
+
+<span style="color:#998;font-style:italic">//kv查询
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">func</span> (s <span style="color:#000;font-weight:bold">*</span>kvstore) <span style="color:#900;font-weight:bold">Lookup</span>(key <span style="color:#458;font-weight:bold">string</span>) (<span style="color:#458;font-weight:bold">string</span>, <span style="color:#458;font-weight:bold">bool</span>) {
+	s.mu.<span style="color:#900;font-weight:bold">RLock</span>()
+	v, ok <span style="color:#000;font-weight:bold">:=</span> s.kvStore[key]
+	s.mu.<span style="color:#900;font-weight:bold">RUnlock</span>()
+	<span style="color:#000;font-weight:bold">return</span> v, ok
+}
+
+<span style="color:#998;font-style:italic">//kv插入，先编码然后传入proposeC的管道
+</span><span style="color:#998;font-style:italic"></span><span style="color:#000;font-weight:bold">func</span> (s <span style="color:#000;font-weight:bold">*</span>kvstore) <span style="color:#900;font-weight:bold">Propose</span>(k <span style="color:#458;font-weight:bold">string</span>, v <span style="color:#458;font-weight:bold">string</span>) {
+	<span style="color:#000;font-weight:bold">var</span> buf bytes.Buffer
+	<span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">:=</span> gob.<span style="color:#900;font-weight:bold">NewEncoder</span>(<span style="color:#000;font-weight:bold">&amp;</span>buf).<span style="color:#900;font-weight:bold">Encode</span>(kv{k, v}); err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> {
+		log.<span style="color:#900;font-weight:bold">Fatal</span>(err)
+	}
+	s.proposeC <span style="color:#000;font-weight:bold">&lt;-</span> buf.<span style="color:#900;font-weight:bold">String</span>()
+}
+
+<span style="color:#000;font-weight:bold">func</span> (s <span style="color:#000;font-weight:bold">*</span>kvstore) <span style="color:#900;font-weight:bold">readCommits</span>(commitC <span style="color:#000;font-weight:bold">&lt;-</span><span style="color:#000;font-weight:bold">chan</span> <span style="color:#000;font-weight:bold">*</span><span style="color:#458;font-weight:bold">string</span>, errorC <span style="color:#000;font-weight:bold">&lt;-</span><span style="color:#000;font-weight:bold">chan</span> <span style="color:#458;font-weight:bold">error</span>) {
+	<span style="color:#000;font-weight:bold">for</span> data <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">range</span> commitC {
+		<span style="color:#000;font-weight:bold">if</span> data <span style="color:#000;font-weight:bold">==</span> <span style="color:#000;font-weight:bold">nil</span> {
+			<span style="color:#998;font-style:italic">// done replaying log; new data incoming
+</span><span style="color:#998;font-style:italic"></span>			<span style="color:#998;font-style:italic">// OR signaled to load snapshot
+</span><span style="color:#998;font-style:italic"></span>			snapshot, err <span style="color:#000;font-weight:bold">:=</span> s.snapshotter.<span style="color:#900;font-weight:bold">Load</span>()
+			<span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">==</span> snap.ErrNoSnapshot {
+				<span style="color:#000;font-weight:bold">return</span>
+			}
+			<span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> err <span style="color:#000;font-weight:bold">!=</span> snap.ErrNoSnapshot {
+				log.<span style="color:#900;font-weight:bold">Panic</span>(err)
+			}
+			log.<span style="color:#900;font-weight:bold">Printf</span>(<span style="color:#d14">&#34;loading snapshot at term %d and index %d&#34;</span>, snapshot.Metadata.Term, snapshot.Metadata.Index)
+			<span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">:=</span> s.<span style="color:#900;font-weight:bold">recoverFromSnapshot</span>(snapshot.Data); err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> {
+				log.<span style="color:#900;font-weight:bold">Panic</span>(err)
+			}
+			<span style="color:#000;font-weight:bold">continue</span>
+		}
+
+		<span style="color:#000;font-weight:bold">var</span> dataKv kv
+		dec <span style="color:#000;font-weight:bold">:=</span> gob.<span style="color:#900;font-weight:bold">NewDecoder</span>(bytes.<span style="color:#900;font-weight:bold">NewBufferString</span>(<span style="color:#000;font-weight:bold">*</span>data))
+		<span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">:=</span> dec.<span style="color:#900;font-weight:bold">Decode</span>(<span style="color:#000;font-weight:bold">&amp;</span>dataKv); err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> {
+			log.<span style="color:#900;font-weight:bold">Fatalf</span>(<span style="color:#d14">&#34;raftexample: could not decode message (%v)&#34;</span>, err)
+		}
+		s.mu.<span style="color:#900;font-weight:bold">Lock</span>()
+		s.kvStore[dataKv.Key] = dataKv.Val
+		s.mu.<span style="color:#900;font-weight:bold">Unlock</span>()
+	}
+	<span style="color:#000;font-weight:bold">if</span> err, ok <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">&lt;-</span>errorC; ok {
+		log.<span style="color:#900;font-weight:bold">Fatal</span>(err)
+	}
+}
+
+</code></pre></td></tr></table>
+</div>
+</div><p>再看一下另一边，POST和DELETE方法中的confChangeC是哪里在监听管道呢?其实是在raft.go中，通过newRaftNode -&gt; startRaft -&gt; severChannels,这一部分核心代码很重要。serveChannels里面开了两个协程，一个协程用于监听proposeC（kvstore.Propose方法传入的数据）和confChangeC（httpKVAPI.ServeHTTP中POST和DELETE传入的数据），然后通过raftNode.node接口传数据到raft底层进行节点之间的同步处理。另一协程用于监听从底层raft传回的Ready数据，应用负责写WAL和网络传输发送给集群其他节点，在publishEntries将commited的数据传给你commitC（kvstore.readCommits负责监听管道），最后通知底层raft状态机应用更新完毕，可以准备下一次Ready了。</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">40
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">41
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">42
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">43
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">44
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">45
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">46
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">47
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">48
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">49
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">50
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">51
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">52
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">53
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">54
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">55
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">56
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">57
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">58
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">59
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">60
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">61
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">62
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">63
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">64
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">65
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">66
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">67
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">68
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">69
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">70
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">71
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">72
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">73
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">74
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">75
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">76
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">77
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">78
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">79
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">80
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">81
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">82
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">83
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">84
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">85
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">86
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#000;font-weight:bold">func</span> (rc <span style="color:#000;font-weight:bold">*</span>raftNode) <span style="color:#900;font-weight:bold">serveChannels</span>() {
+	snap, err <span style="color:#000;font-weight:bold">:=</span> rc.raftStorage.<span style="color:#900;font-weight:bold">Snapshot</span>()
+	<span style="color:#000;font-weight:bold">if</span> err <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> {
+		<span style="color:#0086b3">panic</span>(err)
+	}
+	rc.confState = snap.Metadata.ConfState
+	rc.snapshotIndex = snap.Metadata.Index
+	rc.appliedIndex = snap.Metadata.Index
+
+	<span style="color:#000;font-weight:bold">defer</span> rc.wal.<span style="color:#900;font-weight:bold">Close</span>()
+
+	ticker <span style="color:#000;font-weight:bold">:=</span> time.<span style="color:#900;font-weight:bold">NewTicker</span>(<span style="color:#099">100</span> <span style="color:#000;font-weight:bold">*</span> time.Millisecond)
+	<span style="color:#000;font-weight:bold">defer</span> ticker.<span style="color:#900;font-weight:bold">Stop</span>()
+
+	<span style="color:#998;font-style:italic">// send proposals over raft
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#000;font-weight:bold">go</span> <span style="color:#000;font-weight:bold">func</span>() {
+		<span style="color:#000;font-weight:bold">var</span> confChangeCount <span style="color:#458;font-weight:bold">uint64</span> = <span style="color:#099">0</span>
+
+		<span style="color:#998;font-style:italic">//监听proposeC和confChanegC，处理http中发来的请求
+</span><span style="color:#998;font-style:italic"></span>		<span style="color:#000;font-weight:bold">for</span> rc.proposeC <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> <span style="color:#000;font-weight:bold">&amp;&amp;</span> rc.confChangeC <span style="color:#000;font-weight:bold">!=</span> <span style="color:#000;font-weight:bold">nil</span> {
+			<span style="color:#000;font-weight:bold">select</span> {
+			<span style="color:#000;font-weight:bold">case</span> prop, ok <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">&lt;-</span>rc.proposeC:
+				<span style="color:#000;font-weight:bold">if</span> !ok {
+					rc.proposeC = <span style="color:#000;font-weight:bold">nil</span>
+				} <span style="color:#000;font-weight:bold">else</span> {
+					<span style="color:#998;font-style:italic">// blocks until accepted by raft state machine
+</span><span style="color:#998;font-style:italic"></span>					rc.node.<span style="color:#900;font-weight:bold">Propose</span>(context.<span style="color:#900;font-weight:bold">TODO</span>(), []<span style="color:#0086b3">byte</span>(prop))
+				}
+
+			<span style="color:#000;font-weight:bold">case</span> cc, ok <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">&lt;-</span>rc.confChangeC:
+				<span style="color:#000;font-weight:bold">if</span> !ok {
+					rc.confChangeC = <span style="color:#000;font-weight:bold">nil</span>
+				} <span style="color:#000;font-weight:bold">else</span> {
+					confChangeCount <span style="color:#000;font-weight:bold">+=</span> <span style="color:#099">1</span>
+					cc.ID = confChangeCount
+					rc.node.<span style="color:#900;font-weight:bold">ProposeConfChange</span>(context.<span style="color:#900;font-weight:bold">TODO</span>(), cc)
+				}
+			}
+		}
+		<span style="color:#998;font-style:italic">// client closed channel; shutdown raft if not already
+</span><span style="color:#998;font-style:italic"></span>		<span style="color:#0086b3">close</span>(rc.stopc)
+	}()
+
+	<span style="color:#998;font-style:italic">// event loop on raft state machine updates
+</span><span style="color:#998;font-style:italic"></span>	<span style="color:#000;font-weight:bold">for</span> {
+		<span style="color:#000;font-weight:bold">select</span> {
+		<span style="color:#000;font-weight:bold">case</span> <span style="color:#000;font-weight:bold">&lt;-</span>ticker.C:
+			rc.node.<span style="color:#900;font-weight:bold">Tick</span>()
+
+		<span style="color:#998;font-style:italic">// store raft entries to wal, then publish over commit channel
+</span><span style="color:#998;font-style:italic"></span>		<span style="color:#000;font-weight:bold">case</span> rd <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">&lt;-</span>rc.node.<span style="color:#900;font-weight:bold">Ready</span>():
+
+			<span style="color:#998;font-style:italic">//底层raft库通过Ready组件传给应用，应用负责写WAL和网络传输发送给集群其他节点
+</span><span style="color:#998;font-style:italic"></span>			<span style="color:#998;font-style:italic">//写WAL
+</span><span style="color:#998;font-style:italic"></span>			rc.wal.<span style="color:#900;font-weight:bold">Save</span>(rd.HardState, rd.Entries)
+			<span style="color:#000;font-weight:bold">if</span> !raft.<span style="color:#900;font-weight:bold">IsEmptySnap</span>(rd.Snapshot) {
+				rc.<span style="color:#900;font-weight:bold">saveSnap</span>(rd.Snapshot)
+				rc.raftStorage.<span style="color:#900;font-weight:bold">ApplySnapshot</span>(rd.Snapshot)
+				rc.<span style="color:#900;font-weight:bold">publishSnapshot</span>(rd.Snapshot)
+			}
+			rc.raftStorage.<span style="color:#900;font-weight:bold">Append</span>(rd.Entries)
+			<span style="color:#998;font-style:italic">//发送给Follower
+</span><span style="color:#998;font-style:italic"></span>			rc.transport.<span style="color:#900;font-weight:bold">Send</span>(rd.Messages)
+			<span style="color:#998;font-style:italic">//当底层raft组件判定请求在集群多数节点已经完成状态复制后，raft会将其视为可commit，
+</span><span style="color:#998;font-style:italic"></span>			<span style="color:#998;font-style:italic">//raft组件会将一个commit消息通过commit channel返回给应用(kvstore)，
+</span><span style="color:#998;font-style:italic"></span>			<span style="color:#998;font-style:italic">//应用在收到该commit消息后，将其应用至应用状态机，即存储在内存的kv map之中
+</span><span style="color:#998;font-style:italic"></span>			<span style="color:#998;font-style:italic">//将已经conmmited的日志提交到状态机
+</span><span style="color:#998;font-style:italic"></span>			<span style="color:#000;font-weight:bold">if</span> ok <span style="color:#000;font-weight:bold">:=</span> rc.<span style="color:#900;font-weight:bold">publishEntries</span>(rc.<span style="color:#900;font-weight:bold">entriesToApply</span>(rd.CommittedEntries)); !ok {
+				rc.<span style="color:#900;font-weight:bold">stop</span>()
+				<span style="color:#000;font-weight:bold">return</span>
+			}
+			rc.<span style="color:#900;font-weight:bold">maybeTriggerSnapshot</span>()
+			<span style="color:#998;font-style:italic">//通知底层raft状态机应用更新完毕，可以准备下一次Ready了
+</span><span style="color:#998;font-style:italic"></span>			rc.node.<span style="color:#900;font-weight:bold">Advance</span>()
+
+		<span style="color:#000;font-weight:bold">case</span> err <span style="color:#000;font-weight:bold">:=</span> <span style="color:#000;font-weight:bold">&lt;-</span>rc.transport.ErrorC:
+			rc.<span style="color:#900;font-weight:bold">writeError</span>(err)
+			<span style="color:#000;font-weight:bold">return</span>
+
+		<span style="color:#000;font-weight:bold">case</span> <span style="color:#000;font-weight:bold">&lt;-</span>rc.stopc:
+			rc.<span style="color:#900;font-weight:bold">stop</span>()
+			<span style="color:#000;font-weight:bold">return</span>
+		}
+	}
+}
+
+</code></pre></td></tr></table>
+</div>
+</div><p>基本上流程到这里就很清晰了，总结一下etcd/raft库的使用：etcd/raft底层只是对raft核心做了封装，并给定了数据结构和接口供应用层使用，应用层需要做许多自己的处理（包括WAL，Snapshot，节点之间传输，包括自己的功能如kv存储）才能正在使用起来整个库。</p>
+<p>下一步的问题就是要去etcd/raft中看一下node和底层选举、log Entry是如何实现的。</p>
+<p>参考</p>
+<ol>
+<li>etcd/raft</li>
+<li>etcd/contrib/raftexample</li>
+</ol>
+
+        </div>
+
+        
+<div class="post-archive">
+    <ul class="post-copyright">
+        <li><strong>原文作者：</strong><a rel="author" href="http://hahgiraffe.github.io/">hahgiraffe</a></li>
+        <li style="word-break:break-all"><strong>原文链接：</strong><a href="http://hahgiraffe.github.io/post/etcd%E7%9A%84raftexample%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">http://hahgiraffe.github.io/post/etcd%E7%9A%84raftexample%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</a></li>
+        <li><strong>版权声明：</strong>本作品采用<a rel="license" href="https://creativecommons.org/licenses/by-nc-nd/4.0/">知识共享署名-非商业性使用-禁止演绎 4.0 国际许可协议</a>进行许可，非商业转载请注明出处（作者，原文链接），商业转载请联系作者获得授权。</li>
+    </ul>
+</div>
+<br/>
+
+
+
+        
+
+<div class="post-archive">
+    <h2>See Also</h2>
+    <ul class="listing">
+        
+        <li><a href="/post/raft%E6%A6%82%E8%BF%B0/">Raft概述</a></li>
+        
+        <li><a href="/post/%E5%8D%8F%E7%A8%8B%E6%A6%82%E8%BF%B0%E4%B8%8ELibco/">协程概述与Libco</a></li>
+        
+        <li><a href="/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/">C&#43;&#43;云风库coroutine解析</a></li>
+        
+        <li><a href="/tools/git/">Git</a></li>
+        
+        <li><a href="/about/">About me</a></li>
+        
+    </ul>
+</div>
+
+
+        <div class="post-meta meta-tags">
+            
+            没有标签
+            
+        </div>
+    </article>
+    
+    
+
+    
+    
+</div>
+
+                </div>
+
+                <div id="secondary">
+    <section class="widget">
+        <form id="search" action='http://hahgiraffe.github.io/search/' method="get" accept-charset="utf-8" target="_blank" _lpchecked="1">
+      
+      <input type="text" name="q" maxlength="20" placeholder="Search">
+      <input type="hidden" name="sitesearch" value="http://hahgiraffe.github.io/">
+      <button type="submit" class="submit icon-search"></button>
+</form>
+    </section>
+    
+    <section class="widget">
+        <h3 class="widget-title">最近文章</h3>
+<ul class="widget-list">
+    
+    <li>
+        <a href="http://hahgiraffe.github.io/post/etcd%E7%9A%84raftexample%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" title="Etcd的raftexample源码分析">Etcd的raftexample源码分析</a>
+    </li>
+    
+    <li>
+        <a href="http://hahgiraffe.github.io/post/raft%E6%A6%82%E8%BF%B0/" title="Raft概述">Raft概述</a>
+    </li>
+    
+    <li>
+        <a href="http://hahgiraffe.github.io/post/%E5%8D%8F%E7%A8%8B%E6%A6%82%E8%BF%B0%E4%B8%8ELibco/" title="协程概述与Libco">协程概述与Libco</a>
+    </li>
+    
+    <li>
+        <a href="http://hahgiraffe.github.io/post/C&#43;&#43;%E4%BA%91%E9%A3%8E%E5%BA%93coroutine%E8%A7%A3%E6%9E%90/" title="C&#43;&#43;云风库coroutine解析">C&#43;&#43;云风库coroutine解析</a>
+    </li>
+    
+</ul>
+    </section>
+
+    
+
+    <section class="widget">
+        <h3 class="widget-title">分类</h3>
+<ul class="widget-list">
+    
+    <li><a href="http://hahgiraffe.github.io/categories/C/C&#43;&#43;/">C/C&#43;&#43; (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/etcd/">etcd (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/git/">git (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/raft/">raft (2)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/thinking/">thinking (1)</a></li>
+    
+    <li><a href="http://hahgiraffe.github.io/categories/%E5%8D%8F%E7%A8%8B/">协程 (2)</a></li>
+    
+</ul>
+    </section>
+
+    <section class="widget">
+        <h3 class="widget-title">标签</h3>
+<div class="tagcloud">
+    
+    <a href="http://hahgiraffe.github.io/tags/myself/">myself</a>
+    
+    <a href="http://hahgiraffe.github.io/tags/tools/">tools</a>
+    
+</div>
+    </section>
+
+    
+<section class="widget">
+    <h3 class="widget-title">友情链接</h3>
+    <ul class="widget-list">
+        
+        <li>
+            <a target="_blank" href="https://www.github.com/hahgiraffe" title="my github">my github</a>
+        </li>
+        
+        <li>
+            <a target="_blank" href="https://me.csdn.net/puliao4167" title="my old blog">my old blog</a>
+        </li>
+        
+    </ul>
+</section>
+
+
+    <section class="widget">
+        <h3 class="widget-title">其它</h3>
+        <ul class="widget-list">
+            <li><a href="http://hahgiraffe.github.io/index.xml">文章 RSS</a></li>
+        </ul>
+    </section>
+</div>
+            </div>
+        </div>
+    </div>
+    <footer id="footer">
+    <div class="container">
+        &copy; 2020 <a href="http://hahgiraffe.github.io/">HAHGIRAFFE&#39;S BLOG By hahgiraffe</a>.
+        Powered by <a rel="nofollow noreferer noopener" href="https://gohugo.io" target="_blank">Hugo</a>.
+        <a href="https://www.flysnow.org/" target="_blank">Theme</a> based on <a href="https://github.com/flysnow-org/maupassant-hugo" target="_blank">maupassant</a>.
+        
+    </div>
+</footer>
+
+
+    
+    <script type="text/javascript">
+        window.MathJax = {
+            tex2jax: {
+                inlineMath: [['$', '$']],
+                processEscapes: true
+                }
+            };
+    </script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
+
+
+<a id="rocket" href="#top"></a>
+<script type="text/javascript" src='/js/totop.js?v=0.0.0' async=""></script>
+
+
+
+    <script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script>
+
+
+
+
+    <script src='/js/douban.js'></script>
+
+</body>
+
+</html>
